@@ -7,8 +7,7 @@ Resource                      ${RENODEKEYWORDS}
 
 *** Variables ***
 ${SCRIPT}                     ${CURDIR}/test.resc
-${UART}                       sysbus.uart
-
+${UART}                       sysbus.uart0
 
 *** Keywords ***
 Load Script
@@ -17,11 +16,33 @@ Load Script
 
 
 *** Test Cases ***
-Should Run Test Case
+Should Handle LED and Button
     Load Script
+    Create LED Tester         sysbus.gpio0.led  defaultTimeout=0
+
     Start Emulation
-    Wait For Prompt On Uart     uart:~$
-    Write Line To Uart
-    Wait For Prompt On Uart     uart:~$
-    Write Line To Uart          demo ping
-    Wait For Line On Uart       pong
+    Wait For Line On Uart     Booting Zephyr OS
+    Wait For Line On Uart     Press the button
+
+    Assert LED State          true
+    Execute Command           sysbus.gpio0.button Press
+    Sleep           1s
+    Assert LED State          false
+    Execute Command           sysbus.gpio0.button Release
+    Sleep           1s
+    # TODO: those sleeps shouldn't be necessary!
+    Assert LED State          true
+
+Should triger interrupt on Button press
+    Load Script
+    Create LED Tester               sysbus.gpio0.led  defaultTimeout=0
+
+    Start Emulation
+    Wait For Line On Uart           Booting Zephyr OS
+    Wait For Line On Uart           Press the button
+
+    Execute Command                 sysbus.gpio0.button Press
+
+    ${p}=  Wait For Next Line On Uart   timeout=3
+
+    Should Start With               ${p}    "Button pressed at"
